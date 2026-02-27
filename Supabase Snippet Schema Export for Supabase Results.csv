@@ -1,0 +1,798 @@
+📄 SCHEMA SQL - Copy semua baris ini
+-- =====================================================
+-- SUPABASE DATABASE SCHEMA EXPORT
+-- Generated: 2026-02-26 06:32:28.465095+00
+-- =====================================================
+
+-- =====================================================
+-- TABLES
+-- =====================================================
+
+"-- Table: audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  user_id UUID,
+  aksi TEXT NOT NULL,
+  entitas TEXT,
+  entitas_id UUID,
+  data_lama JSONB,
+  data_baru JSONB,
+  ip_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+"
+"-- Table: customers
+CREATE TABLE IF NOT EXISTS customers (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  nama TEXT NOT NULL,
+  no_telepon TEXT NOT NULL,
+  alamat TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  poin_balance BIGINT DEFAULT 0
+);
+"
+"-- Table: expenses
+CREATE TABLE IF NOT EXISTS expenses (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  kategori TEXT NOT NULL,
+  jumlah_idr BIGINT NOT NULL,
+  keterangan TEXT,
+  tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by UUID
+);
+"
+"-- Table: inventory_items
+CREATE TABLE IF NOT EXISTS inventory_items (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  nama_barang TEXT NOT NULL,
+  satuan TEXT NOT NULL,
+  stok NUMERIC DEFAULT 0,
+  stok_minimum NUMERIC DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+"
+"-- Table: inventory_logs
+CREATE TABLE IF NOT EXISTS inventory_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  item_id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  tipe TEXT NOT NULL,
+  jumlah NUMERIC NOT NULL,
+  keterangan TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID
+);
+"
+"-- Table: licenses
+CREATE TABLE IF NOT EXISTS licenses (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  package license_package NOT NULL,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  grace_days INTEGER NOT NULL DEFAULT 3,
+  status license_status NOT NULL DEFAULT 'aktif'::license_status,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: order_items
+CREATE TABLE IF NOT EXISTS order_items (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  order_id UUID NOT NULL,
+  service_id UUID,
+  nama_item TEXT NOT NULL,
+  harga_satuan BIGINT NOT NULL,
+  jumlah NUMERIC NOT NULL,
+  satuan TEXT,
+  subtotal BIGINT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+"
+"-- Table: order_status_logs
+CREATE TABLE IF NOT EXISTS order_status_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  order_id UUID NOT NULL,
+  status_lama order_status,
+  status_baru order_status NOT NULL,
+  catatan TEXT,
+  changed_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: orders
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  kode TEXT NOT NULL,
+  customer_id UUID NOT NULL,
+  service_id UUID,
+  berat_kg NUMERIC,
+  total_idr BIGINT NOT NULL,
+  status order_status NOT NULL DEFAULT 'pesanan_masuk'::order_status,
+  barcode_value TEXT NOT NULL,
+  catatan TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  selesai_dicuci_at TIMESTAMPTZ,
+  diambil_at TIMESTAMPTZ,
+  status_pembayaran order_pay_status NOT NULL DEFAULT 'belum_lunas'::order_pay_status,
+  metode_pembayaran TEXT DEFAULT 'tunai'::text,
+  dibayar_idr BIGINT NOT NULL DEFAULT 0,
+  uang_muka_idr BIGINT DEFAULT 0
+);
+"
+"-- Table: payments
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  license_id UUID,
+  amount_idr BIGINT NOT NULL,
+  metode TEXT NOT NULL DEFAULT 'manual_transfer'::text,
+  bukti_url TEXT,
+  status payment_status NOT NULL DEFAULT 'menunggu_verifikasi'::payment_status,
+  paid_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: profiles
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID NOT NULL,
+  nama TEXT NOT NULL,
+  no_telepon TEXT,
+  global_role app_role NOT NULL DEFAULT 'operator'::app_role,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: services
+CREATE TABLE IF NOT EXISTS services (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  nama_layanan TEXT NOT NULL,
+  satuan TEXT NOT NULL DEFAULT 'kg'::text,
+  harga_default_idr BIGINT NOT NULL,
+  estimasi_jam INTEGER,
+  aktif BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: tenant_settings
+CREATE TABLE IF NOT EXISTS tenant_settings (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  key TEXT NOT NULL,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: tenants
+CREATE TABLE IF NOT EXISTS tenants (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  kode TEXT NOT NULL,
+  nama TEXT NOT NULL,
+  alamat TEXT,
+  no_telepon TEXT,
+  timezone TEXT NOT NULL DEFAULT 'Asia/Jakarta'::text,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  alamat_lengkap TEXT,
+  logo_url TEXT,
+  footer_struk TEXT DEFAULT 'Terima kasih atas kepercayaan Anda!'::text
+);
+"
+"-- Table: user_tenants
+CREATE TABLE IF NOT EXISTS user_tenants (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  role app_role NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+"-- Table: vouchers
+CREATE TABLE IF NOT EXISTS vouchers (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  kode_voucher TEXT NOT NULL,
+  tipe_potongan TEXT NOT NULL,
+  nilai BIGINT NOT NULL,
+  min_order BIGINT DEFAULT 0,
+  kuota INTEGER DEFAULT 999,
+  tgl_kadaluarsa DATE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+"
+"-- Table: wa_message_logs
+CREATE TABLE IF NOT EXISTS wa_message_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  order_id UUID,
+  customer_id UUID,
+  destination_phone TEXT NOT NULL,
+  message_body TEXT NOT NULL,
+  api_url TEXT,
+  response_code INTEGER,
+  response_body TEXT,
+  is_success BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+"
+
+-- =====================================================
+-- CONSTRAINTS
+-- =====================================================
+
+ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id);
+ALTER TABLE customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);
+ALTER TABLE customers ADD CONSTRAINT customers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE customers ADD CONSTRAINT customers_tenant_id_no_telepon_key UNIQUE (tenant_id, no_telepon);"
+ALTER TABLE expenses ADD CONSTRAINT expenses_created_by_fkey FOREIGN KEY (created_by) REFERENCES profiles(id);
+ALTER TABLE expenses ADD CONSTRAINT expenses_pkey PRIMARY KEY (id);
+ALTER TABLE expenses ADD CONSTRAINT expenses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE inventory_items ADD CONSTRAINT inventory_items_pkey PRIMARY KEY (id);
+ALTER TABLE inventory_items ADD CONSTRAINT inventory_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE inventory_logs ADD CONSTRAINT inventory_logs_created_by_fkey FOREIGN KEY (created_by) REFERENCES profiles(id);
+ALTER TABLE inventory_logs ADD CONSTRAINT inventory_logs_item_id_fkey FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE;
+ALTER TABLE inventory_logs ADD CONSTRAINT inventory_logs_pkey PRIMARY KEY (id);
+ALTER TABLE inventory_logs ADD CONSTRAINT inventory_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE licenses ADD CONSTRAINT licenses_pkey PRIMARY KEY (id);
+ALTER TABLE licenses ADD CONSTRAINT licenses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE order_items ADD CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+ALTER TABLE order_items ADD CONSTRAINT order_items_pkey PRIMARY KEY (id);
+ALTER TABLE order_items ADD CONSTRAINT order_items_service_id_fkey FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL;
+ALTER TABLE order_items ADD CONSTRAINT order_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE order_status_logs ADD CONSTRAINT order_status_logs_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES profiles(id);
+ALTER TABLE order_status_logs ADD CONSTRAINT order_status_logs_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+ALTER TABLE order_status_logs ADD CONSTRAINT order_status_logs_pkey PRIMARY KEY (id);
+ALTER TABLE order_status_logs ADD CONSTRAINT order_status_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE orders ADD CONSTRAINT orders_created_by_fkey FOREIGN KEY (created_by) REFERENCES profiles(id);
+ALTER TABLE orders ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT;
+ALTER TABLE orders ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+ALTER TABLE orders ADD CONSTRAINT orders_service_id_fkey FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL;
+"ALTER TABLE orders ADD CONSTRAINT orders_tenant_id_barcode_value_key UNIQUE (tenant_id, barcode_value);"
+ALTER TABLE orders ADD CONSTRAINT orders_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE orders ADD CONSTRAINT orders_tenant_id_kode_key UNIQUE (tenant_id, kode);"
+ALTER TABLE payments ADD CONSTRAINT payments_license_id_fkey FOREIGN KEY (license_id) REFERENCES licenses(id) ON DELETE SET NULL;
+ALTER TABLE payments ADD CONSTRAINT payments_pkey PRIMARY KEY (id);
+ALTER TABLE payments ADD CONSTRAINT payments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE profiles ADD CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
+ALTER TABLE services ADD CONSTRAINT services_pkey PRIMARY KEY (id);
+ALTER TABLE services ADD CONSTRAINT services_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE services ADD CONSTRAINT services_tenant_id_nama_layanan_key UNIQUE (tenant_id, nama_layanan);"
+ALTER TABLE tenant_settings ADD CONSTRAINT tenant_settings_pkey PRIMARY KEY (id);
+ALTER TABLE tenant_settings ADD CONSTRAINT tenant_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE tenant_settings ADD CONSTRAINT tenant_settings_tenant_id_key_key UNIQUE (tenant_id, key);"
+ALTER TABLE tenants ADD CONSTRAINT tenants_kode_key UNIQUE (kode);
+ALTER TABLE tenants ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_pkey PRIMARY KEY (id);
+ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_tenant_id_user_id_key UNIQUE (tenant_id, user_id);"
+ALTER TABLE user_tenants ADD CONSTRAINT user_tenants_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
+ALTER TABLE vouchers ADD CONSTRAINT vouchers_pkey PRIMARY KEY (id);
+ALTER TABLE vouchers ADD CONSTRAINT vouchers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+"ALTER TABLE vouchers ADD CONSTRAINT vouchers_tenant_id_kode_voucher_key UNIQUE (tenant_id, kode_voucher);"
+ALTER TABLE wa_message_logs ADD CONSTRAINT wa_message_logs_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL;
+ALTER TABLE wa_message_logs ADD CONSTRAINT wa_message_logs_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+ALTER TABLE wa_message_logs ADD CONSTRAINT wa_message_logs_pkey PRIMARY KEY (id);
+ALTER TABLE wa_message_logs ADD CONSTRAINT wa_message_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+
+-- =====================================================
+-- ROW LEVEL SECURITY (RLS)
+-- =====================================================
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE licenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_status_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wa_message_logs ENABLE ROW LEVEL SECURITY;
+"
+-- Policy: audit_logs_user_tenant_scoped on audit_logs
+CREATE POLICY audit_logs_user_tenant_scoped ON audit_logs
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: customers_user_tenant_scoped on customers
+CREATE POLICY customers_user_tenant_scoped ON customers
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: expenses_user_tenant_scoped on expenses
+CREATE POLICY expenses_user_tenant_scoped ON expenses
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: inventory_items_user_tenant_scoped on inventory_items
+CREATE POLICY inventory_items_user_tenant_scoped ON inventory_items
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: inventory_logs_user_tenant_scoped on inventory_logs
+CREATE POLICY inventory_logs_user_tenant_scoped ON inventory_logs
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: licenses_admin_all on licenses
+CREATE POLICY licenses_admin_all ON licenses
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());"
+"
+-- Policy: licenses_tenant_isolation on licenses
+CREATE POLICY licenses_tenant_isolation ON licenses
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+;"
+"
+-- Policy: licenses_user_tenant_scoped on licenses
+CREATE POLICY licenses_user_tenant_scoped ON licenses
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: order_items_user_tenant_scoped on order_items
+CREATE POLICY order_items_user_tenant_scoped ON order_items
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: order_status_logs_user_tenant_scoped on order_status_logs
+CREATE POLICY order_status_logs_user_tenant_scoped ON order_status_logs
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: orders_user_tenant_scoped on orders
+CREATE POLICY orders_user_tenant_scoped ON orders
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: payments_admin_all on payments
+CREATE POLICY payments_admin_all ON payments
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());"
+"
+-- Policy: payments_owner_access on payments
+CREATE POLICY payments_owner_access ON payments
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+;"
+"
+-- Policy: payments_owner_insert on payments
+CREATE POLICY payments_owner_insert ON payments
+  AS PERMISSIVE
+  FOR INSERT
+  TO authenticated
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: payments_owner_self on payments
+CREATE POLICY payments_owner_self ON payments
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+;"
+"
+-- Policy: payments_user_tenant_scoped on payments
+CREATE POLICY payments_user_tenant_scoped ON payments
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: profiles_admin_all on profiles
+CREATE POLICY profiles_admin_all ON profiles
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+;"
+"
+-- Policy: profiles_user_self on profiles
+CREATE POLICY profiles_user_self ON profiles
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((auth.uid() = id))
+;"
+"
+-- Policy: services_user_tenant_scoped on services
+CREATE POLICY services_user_tenant_scoped ON services
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: tenant_settings_read on tenant_settings
+CREATE POLICY tenant_settings_read ON tenant_settings
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING (((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))) OR is_admin()))
+;"
+"
+-- Policy: tenant_settings_user_tenant_scoped on tenant_settings
+CREATE POLICY tenant_settings_user_tenant_scoped ON tenant_settings
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: tenant_settings_write on tenant_settings
+CREATE POLICY tenant_settings_write ON tenant_settings
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((is_admin() OR (tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE ((user_tenants.user_id = auth.uid()) AND (user_tenants.role = ANY (ARRAY['owner'::app_role, 'admin'::app_role])))))))
+  WITH CHECK ((is_admin() OR (tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE ((user_tenants.user_id = auth.uid()) AND (user_tenants.role = ANY (ARRAY['owner'::app_role, 'admin'::app_role])))))));"
+"
+-- Policy: tenants_admin_all on tenants
+CREATE POLICY tenants_admin_all ON tenants
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());"
+"
+-- Policy: tenants_read_access on tenants
+CREATE POLICY tenants_read_access ON tenants
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING (((id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))) OR is_admin()))
+;"
+"
+-- Policy: tenants_user_select on tenants
+CREATE POLICY tenants_user_select ON tenants
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE ((user_tenants.user_id = auth.uid()) AND (user_tenants.is_active = true)))))
+;"
+"
+-- Policy: user_tenants_admin_all on user_tenants
+CREATE POLICY user_tenants_admin_all ON user_tenants
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());"
+"
+-- Policy: user_tenants_self on user_tenants
+CREATE POLICY user_tenants_self ON user_tenants
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((user_id = auth.uid()))
+;"
+"
+-- Policy: user_tenants_user_select on user_tenants
+CREATE POLICY user_tenants_user_select ON user_tenants
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING ((auth.uid() = user_id))
+;"
+"
+-- Policy: vouchers_read_access on vouchers
+CREATE POLICY vouchers_read_access ON vouchers
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING (((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))) OR is_admin()))
+;"
+"
+-- Policy: vouchers_user_tenant_scoped on vouchers
+CREATE POLICY vouchers_user_tenant_scoped ON vouchers
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+"
+-- Policy: wa_message_logs_user_tenant_scoped on wa_message_logs
+CREATE POLICY wa_message_logs_user_tenant_scoped ON wa_message_logs
+  AS PERMISSIVE
+  FOR ALL
+  TO authenticated
+  USING ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))))
+  WITH CHECK ((tenant_id IN ( SELECT user_tenants.tenant_id
+   FROM user_tenants
+  WHERE (user_tenants.user_id = auth.uid()))));"
+
+-- =====================================================
+-- FUNCTIONS
+-- =====================================================
+
+"
+-- Function: is_admin
+CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_role public.app_role;
+BEGIN
+  -- Mengambil role langsung dari tabel tanpa memicu RLS
+  SELECT global_role INTO v_role FROM public.profiles WHERE id = auth.uid();
+  RETURN (v_role = 'admin');
+END;
+$function$
+;"
+"
+-- Function: license_effective_status
+CREATE OR REPLACE FUNCTION public.license_effective_status(target_tenant uuid)
+ RETURNS license_status
+ LANGUAGE sql
+ STABLE
+AS $function$
+  with latest as (
+    select l.*
+    from public.licenses l
+    where l.tenant_id = target_tenant
+      and l.is_active = true
+    order by l.end_at desc
+    limit 1
+  )
+  select case
+    when exists(select 1 from latest where now() <= end_at) then 'aktif'::public.license_status
+    when exists(select 1 from latest where now() > end_at and now() <= (end_at + (grace_days || ' days')::interval)) then 'masa_tenggang'::public.license_status
+    else 'kedaluwarsa'::public.license_status
+  end;
+$function$
+;"
+"
+-- Function: set_updated_at
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$
+;"
+"
+-- Function: update_order_status
+CREATE OR REPLACE FUNCTION public.update_order_status(p_order_id uuid, p_new_status order_status, p_note text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_tenant_id uuid;
+  v_old_status public.order_status;
+BEGIN
+  -- Ambil data
+  SELECT tenant_id, status INTO v_tenant_id, v_old_status 
+  FROM public.orders WHERE id = p_order_id;
+
+  -- Cek Lisensi
+  IF public.license_effective_status(v_tenant_id) <> 'aktif' THEN
+    RAISE EXCEPTION 'Lisensi toko sudah kedaluwarsa. Silakan perpanjang.';
+  END IF;
+
+  -- Cek Akses (Admin atau Personil Toko)
+  IF NOT (public.is_admin()) AND NOT EXISTS (
+    SELECT 1 FROM public.user_tenants 
+    WHERE user_id = auth.uid() AND tenant_id = v_tenant_id AND is_active = true
+  ) THEN
+    RAISE EXCEPTION 'Anda tidak memiliki akses ke toko ini.';
+  END IF;
+
+  -- Update
+  UPDATE public.orders 
+  SET 
+    status = p_new_status,
+    updated_at = now(),
+    selesai_dicuci_at = CASE WHEN p_new_status = 'selesai_dicuci' THEN now() ELSE selesai_dicuci_at END,
+    diambil_at = CASE WHEN p_new_status = 'sudah_diambil' THEN now() ELSE diambil_at END
+  WHERE id = p_order_id;
+
+  -- Log
+  INSERT INTO public.order_status_logs (order_id, tenant_id, status_lama, status_baru, catatan, changed_by)
+  VALUES (p_order_id, v_tenant_id, v_old_status, p_new_status, p_note, auth.uid());
+END;
+$function$
+;"
+
+-- =====================================================
+-- TRIGGERS
+-- =====================================================
+
+"
+-- Trigger: trg_customers_updated_at on customers
+CREATE TRIGGER trg_customers_updated_at BEFORE UPDATE ON public.customers FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_licenses_updated_at on licenses
+CREATE TRIGGER trg_licenses_updated_at BEFORE UPDATE ON public.licenses FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_orders_updated_at on orders
+CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_payments_updated_at on payments
+CREATE TRIGGER trg_payments_updated_at BEFORE UPDATE ON public.payments FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_profiles_updated_at on profiles
+CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_tenant_settings_updated_at on tenant_settings
+CREATE TRIGGER trg_tenant_settings_updated_at BEFORE UPDATE ON public.tenant_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+"
+-- Trigger: trg_tenants_updated_at on tenants
+CREATE TRIGGER trg_tenants_updated_at BEFORE UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+
+-- =====================================================
+-- INDEXES
+-- =====================================================
+
+"
+-- Index: customers_tenant_id_no_telepon_key on customers
+CREATE UNIQUE INDEX customers_tenant_id_no_telepon_key ON public.customers USING btree (tenant_id, no_telepon);"
+"
+-- Index: orders_tenant_id_barcode_value_key on orders
+CREATE UNIQUE INDEX orders_tenant_id_barcode_value_key ON public.orders USING btree (tenant_id, barcode_value);"
+"
+-- Index: orders_tenant_id_kode_key on orders
+CREATE UNIQUE INDEX orders_tenant_id_kode_key ON public.orders USING btree (tenant_id, kode);"
+"
+-- Index: services_tenant_id_nama_layanan_key on services
+CREATE UNIQUE INDEX services_tenant_id_nama_layanan_key ON public.services USING btree (tenant_id, nama_layanan);"
+"
+-- Index: tenant_settings_tenant_id_key_key on tenant_settings
+CREATE UNIQUE INDEX tenant_settings_tenant_id_key_key ON public.tenant_settings USING btree (tenant_id, key);"
+"
+-- Index: tenants_kode_key on tenants
+CREATE UNIQUE INDEX tenants_kode_key ON public.tenants USING btree (kode);"
+"
+-- Index: user_tenants_tenant_id_user_id_key on user_tenants
+CREATE UNIQUE INDEX user_tenants_tenant_id_user_id_key ON public.user_tenants USING btree (tenant_id, user_id);"
+"
+-- Index: vouchers_tenant_id_kode_voucher_key on vouchers
+CREATE UNIQUE INDEX vouchers_tenant_id_kode_voucher_key ON public.vouchers USING btree (tenant_id, kode_voucher);"
+
+-- =====================================================
+-- SCHEMA EXPORT COMPLETE
+-- =====================================================
