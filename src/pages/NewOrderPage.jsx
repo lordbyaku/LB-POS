@@ -283,13 +283,13 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                     border: '1px solid var(--border)',
                     boxShadow: 'var(--shadow-sm)'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+                        <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                             <span style={{ fontSize: '1.2rem' }}>👥</span> Data Pelanggan
                         </h3>
-                        <div className="toggle-group" style={{ maxWidth: '240px' }}>
-                            <button type="button" className={`toggle-btn ${!isNewCustomer ? 'active' : ''}`} onClick={() => setIsNewCustomer(false)}>Pelanggan Lama</button>
-                            <button type="button" className={`toggle-btn ${isNewCustomer ? 'active' : ''}`} onClick={() => setIsNewCustomer(true)}>Pelanggan Baru</button>
+                        <div className="toggle-group" style={{ width: '100%', maxWidth: '100%' }}>
+                            <button type="button" className={`toggle-btn ${!isNewCustomer ? 'active' : ''}`} onClick={() => setIsNewCustomer(false)} style={{ flex: 1 }}>Pelanggan Lama</button>
+                            <button type="button" className={`toggle-btn ${isNewCustomer ? 'active' : ''}`} onClick={() => setIsNewCustomer(true)} style={{ flex: 1 }}>Pelanggan Baru</button>
                         </div>
                     </div>
 
@@ -409,8 +409,9 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                 </div>
 
                 {/* Section: Layanan */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 16 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
                     <div style={{
+                        flex: '1 1 300px',
                         background: 'var(--surface)',
                         padding: 20,
                         borderRadius: 'var(--radius)',
@@ -428,12 +429,12 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                                     {services.map(s => <option key={s.id} value={s.id}>{s.nama_layanan} (Rp {s.harga_default_idr.toLocaleString()}/{s.satuan})</option>)}
                                 </select>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                <div className="form-group">
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                                <div className="form-group" style={{ flex: '1 1 120px' }}>
                                     <label>Berat / Jumlah</label>
                                     <input type="number" value={weight} onChange={e => setWeight(e.target.value)} placeholder="Contoh: 2.5" step="0.1" />
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ flex: '1 1 120px' }}>
                                     <label>Harga (Otomatis)</label>
                                     <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Rp" />
                                 </div>
@@ -446,6 +447,7 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
 
                     {/* Cart Preview */}
                     <div style={{
+                        flex: '1 1 250px',
                         background: 'rgba(88, 153, 255, 0.05)',
                         padding: 20,
                         borderRadius: 'var(--radius)',
@@ -504,7 +506,7 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                     <h3 style={{ fontSize: '1rem', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: '1.2rem' }}>💳</span> Pembayaran & Promo
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {vouchersEnabled && (
                                 <div className="form-group">
@@ -522,7 +524,7 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 12 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <div className="form-group">
                                     <label>Status Pembayaran</label>
                                     <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)}>
@@ -555,6 +557,8 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                         padding: '24px',
                         borderRadius: 'var(--radius-sm)',
                         display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 16,
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         boxShadow: '0 10px 25px var(--primary-glow)',
@@ -564,11 +568,12 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                         <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '5rem', opacity: 0.1 }}>💰</div>
                         <div style={{ position: 'relative', zIndex: 1 }}>
                             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white', opacity: 0.9, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '1px' }}>Total Bayar</div>
-                            <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white' }}>Rp {finalDisplayPrice.toLocaleString('id-ID')}</div>
-                            {discount > 0 && <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Tercatat potongan voucher Rp {discount.toLocaleString()}</div>}
+                            <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>Rp {finalDisplayPrice.toLocaleString('id-ID')}</div>
+                            {discount > 0 && <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 4 }}>Tercatat potongan voucher Rp {discount.toLocaleString()}</div>}
                         </div>
                         <button type="submit" disabled={loading || cart.length === 0} className="btn-status-premium" style={{
-                            width: 'auto',
+                            flex: '1 1 auto',
+                            minWidth: '150px',
                             padding: '16px 32px',
                             fontSize: '1rem',
                             background: 'white',

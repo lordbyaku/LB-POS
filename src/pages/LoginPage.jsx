@@ -26,7 +26,7 @@ export default function LoginPage({ onLogin }) {
             <div className="login-card">
                 <div className="login-logo">
                     <span className="logo-icon">🧺</span>
-                    <h1>Laundry Komersial</h1>
+                    <h1>LB POS INDONESIA</h1>
                     <p>Sistem Operasional Laundry Indonesia</p>
                 </div>
 
@@ -65,7 +65,7 @@ export default function LoginPage({ onLogin }) {
                 </form>
 
                 <p className="login-footer">
-                    Laundry Komersial Indonesia &copy; {new Date().getFullYear()}
+                    Copyright : Haritrisna Suryadimarta
                 </p>
             </div>
         </div>
