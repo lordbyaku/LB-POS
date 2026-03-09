@@ -47,6 +47,52 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
         window.print();
     }
 
+    function handleShareWhatsApp() {
+        const phone = customer.no_telepon || '';
+        if (!phone) {
+            alert('Nomor telepon pelanggan tidak tersedia.');
+            return;
+        }
+
+        // Format nomor ke internasional (62xxx)
+        let formatted = phone.replace(/[^\d]/g, '');
+        if (formatted.startsWith('0')) {
+            formatted = '62' + formatted.slice(1);
+        } else if (!formatted.startsWith('62')) {
+            formatted = '62' + formatted;
+        }
+
+        const statusText = STATUS_LABEL[order.status] || order.status || 'Pesanan Masuk';
+        const sisa = order.total_idr - (order.dibayar_idr || 0);
+        const bayarInfo = order.status_pembayaran === 'lunas'
+            ? 'LUNAS ✅'
+            : (order.uang_muka_idr > 0
+                ? `DP: ${formatRp(order.uang_muka_idr)} | Sisa: ${formatRp(sisa)}`
+                : 'BELUM LUNAS');
+
+        const lines = [
+            `🧺 *STRUK LAUNDRY*`,
+            `${tenant?.nama || 'LB POS INDONESIA'}`,
+            ``,
+            `📋 Kode: *${order.kode}*`,
+            `📅 Tgl: ${formatDate(order.created_at)}`,
+            ``,
+            `👤 Pelanggan: ${customer.nama || '-'}`,
+            order.services?.nama_layanan ? `🔧 Layanan: ${order.services.nama_layanan}` : '',
+            order.berat_kg ? `⚖️ Berat: ${order.berat_kg} kg` : '',
+            order.catatan ? `📝 Catatan: ${order.catatan}` : '',
+            ``,
+            `💰 Total: *${formatRp(order.total_idr)}*`,
+            `💳 Bayar: ${bayarInfo}`,
+            `📦 Status: ${statusText}`,
+            ``,
+            tenant?.footer_struk ? tenant.footer_struk : 'Terima kasih atas kepercayaan Anda! 🙏',
+        ].filter(l => l !== null && l !== undefined && !(l === '' && false));
+
+        const message = encodeURIComponent(lines.join('\n'));
+        window.open(`https://wa.me/${formatted}?text=${message}`, '_blank');
+    }
+
     async function handleSavePdf() {
         const element = document.querySelector('.print-area');
         if (!element) return;
@@ -177,12 +223,27 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
                     </div>
                 </div>
 
-                <div className="modal-actions" style={{ flexWrap: 'wrap' }}>
+                <div className="modal-actions" style={{ flexWrap: 'wrap', gap: '8px' }}>
                     <button className="btn btn-secondary" onClick={onClose} style={{ flex: '1 1 100%' }}>Tutup</button>
-                    <button className="btn btn-secondary" onClick={handleSavePdf} disabled={isGeneratingPdf} style={{ flex: 1, background: 'var(--bg2)' }}>
+                    <button className="btn btn-secondary" onClick={handleSavePdf} disabled={isGeneratingPdf} style={{ flex: 1, background: 'var(--bg2)', minWidth: '90px' }}>
                         {isGeneratingPdf ? '⏳ Menyimpan...' : '📄 Save PDF'}
                     </button>
-                    <button className="btn btn-primary" onClick={handlePrint} style={{ flex: 1 }}>🖨️ Print Struk</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handlePrint}
+                        style={{ flex: 1, minWidth: '90px' }}
+                    >
+                        🖨️ Print
+                    </button>
+                    <button
+                        className="btn btn-wa"
+                        onClick={handleShareWhatsApp}
+                        disabled={!customer.no_telepon}
+                        title={!customer.no_telepon ? 'Nomor pelanggan tidak tersedia' : `Kirim ke ${customer.no_telepon}`}
+                        style={{ flex: 1, minWidth: '90px' }}
+                    >
+                        <span>📲</span> WA
+                    </button>
                 </div>
             </div>
         </div>

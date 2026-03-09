@@ -92,30 +92,39 @@ export default function OrderCard({ order, onUpdateStatus, onReprint, onDelete, 
             position: 'relative'
         }}>
             {/* Header: Code & Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-                    <div style={{ flex: '1 1 min-content' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 800, letterSpacing: 0.5, wordBreak: 'break-all' }}>#{order.kode}</span>
-                        </div>
-                        <h2 style={{ margin: '8px 0 0 0', fontSize: '1.6rem', fontWeight: 900, wordBreak: 'break-word', lineHeight: 1.2 }}>{order.customers?.nama || 'PELANGGAN'}</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {/* Row 1: Kode + Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                        fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 800,
+                        letterSpacing: 0.5, overflow: 'hidden', textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap', maxWidth: '55%'
+                    }}>#{order.kode}</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                        {onEdit && <button onClick={onEdit} style={{ background: 'var(--surface2)', border: 'none', borderRadius: 8, padding: '7px 9px', cursor: 'pointer', fontSize: '0.85rem' }}>✏️</button>}
+                        {onDelete && <button onClick={onDelete} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: 8, padding: '7px 9px', cursor: 'pointer', fontSize: '0.85rem' }}>🗑️</button>}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                        {onEdit && <button onClick={onEdit} style={{ background: 'var(--surface2)', border: 'none', borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: '0.85rem' }}>✏️</button>}
-                        {onDelete && <button onClick={onDelete} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: '0.85rem' }}>🗑️</button>}
-                        <span style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '8px 14px', borderRadius: 12,
-                            background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1.5px solid var(--border)', textTransform: 'uppercase'
-                        }}>
-                            {STATUS_LABEL[order.status]?.toUpperCase()}
-                        </span>
-                        <span style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '8px 14px', borderRadius: 12,
-                            background: payCfg.bg, color: payCfg.color, border: `1.5px solid ${payCfg.color}44`, textTransform: 'uppercase'
-                        }}>
-                            {payCfg.label}
-                        </span>
-                    </div>
+                </div>
+                {/* Row 2: Nama Pelanggan */}
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, wordBreak: 'break-word', lineHeight: 1.2 }}>
+                    {order.customers?.nama || 'PELANGGAN'}
+                </h2>
+                {/* Row 3: Status Badges */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{
+                        fontSize: '0.72rem', fontWeight: 800, padding: '6px 12px', borderRadius: 10,
+                        background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)',
+                        border: '1.5px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap'
+                    }}>
+                        {STATUS_LABEL[order.status]?.toUpperCase()}
+                    </span>
+                    <span style={{
+                        fontSize: '0.72rem', fontWeight: 800, padding: '6px 12px', borderRadius: 10,
+                        background: payCfg.bg, color: payCfg.color,
+                        border: `1.5px solid ${payCfg.color}44`, textTransform: 'uppercase', whiteSpace: 'nowrap'
+                    }}>
+                        {payCfg.label}
+                    </span>
                 </div>
             </div>
 
