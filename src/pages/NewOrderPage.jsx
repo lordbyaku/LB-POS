@@ -243,6 +243,13 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
             const { error: itemsErr } = await supabase.from('order_items').insert(itemsPayload);
             if (itemsErr) throw itemsErr;
 
+            // Ambil order lengkap dengan order_items untuk struk
+            const { data: fullOrder } = await supabase
+                .from('orders')
+                .select(`*, customers ( nama, no_telepon, alamat ), services ( nama_layanan, satuan ), order_items (*)`)
+                .eq('id', newOrder.id)
+                .single();
+
             // Poin: 1 poin per 10rb
             const pts = Math.floor(finalDisplayPrice / 10000);
             if (pts > 0) {
@@ -255,7 +262,7 @@ export default function NewOrderPage({ tenantId, licenseStatus, profile }) {
                 tenant_id: tenantId, user_id: profile?.id, aksi: 'CREATE_ORDER', entitas: 'orders', entitas_id: newOrder.id, data_baru: newOrder
             });
 
-            setReceiptOrder(newOrder);
+            setReceiptOrder(fullOrder || newOrder);
             loadBasicData();
             // Reset
             setCart([]); setNote(''); setDpAmount(''); setVoucherCode(''); setDiscount(0);

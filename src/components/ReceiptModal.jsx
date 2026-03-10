@@ -70,6 +70,21 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
                 ? `DP: ${formatRp(order.uang_muka_idr)} | Sisa: ${formatRp(sisa)}`
                 : 'BELUM LUNAS');
 
+        // Buat baris detail item
+        let itemLines = [];
+        const items = order.order_items;
+        if (items && items.length > 0) {
+            // Multi-item (dari keranjang)
+            itemLines = items.map(it => {
+                const qty = `${it.jumlah} ${it.satuan || ''}`.trim();
+                return `  • ${it.nama_item} (${qty}) → *${formatRp(it.subtotal)}*`;
+            });
+        } else if (service.nama_layanan) {
+            // Fallback: layanan tunggal
+            const berat = order.berat_kg ? ` ${order.berat_kg} kg` : '';
+            itemLines = [`  • ${service.nama_layanan}${berat} → *${formatRp(order.total_idr)}*`];
+        }
+
         const lines = [
             `🧺 *STRUK LAUNDRY*`,
             `${tenant?.nama || 'LB POS INDONESIA'}`,
@@ -78,16 +93,17 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
             `📅 Tgl: ${formatDate(order.created_at)}`,
             ``,
             `👤 Pelanggan: ${customer.nama || '-'}`,
-            order.services?.nama_layanan ? `🔧 Layanan: ${order.services.nama_layanan}` : '',
-            order.berat_kg ? `⚖️ Berat: ${order.berat_kg} kg` : '',
-            order.catatan ? `📝 Catatan: ${order.catatan}` : '',
+            order.catatan ? `📝 Catatan: _${order.catatan}_` : null,
+            ``,
+            `🛒 *Detail Pesanan:*`,
+            ...itemLines,
             ``,
             `💰 Total: *${formatRp(order.total_idr)}*`,
             `💳 Bayar: ${bayarInfo}`,
             `📦 Status: ${statusText}`,
             ``,
             tenant?.footer_struk ? tenant.footer_struk : 'Terima kasih atas kepercayaan Anda! 🙏',
-        ].filter(l => l !== null && l !== undefined && !(l === '' && false));
+        ].filter(l => l !== null && l !== undefined);
 
         const message = encodeURIComponent(lines.join('\n'));
         window.open(`https://wa.me/${formatted}?text=${message}`, '_blank');
