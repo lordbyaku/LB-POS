@@ -4,7 +4,7 @@ import { sendWaNotification } from '../lib/waNotify';
 import LicenseBanner from '../components/LicenseBanner';
 import OrderCard from '../components/OrderCard';
 import ReceiptModal from '../components/ReceiptModal';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const STATUS_LABEL = {
     pesanan_masuk: 'Pesanan Masuk',
@@ -190,6 +190,22 @@ export default function DashboardPage({ tenantId, licenseStatus, profile }) {
         color: STATUS_COLORS_CHART[i]
     })).filter(d => d.value > 0);
 
+    // Trend 7 Hari Terakhir
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return d.toISOString().slice(0, 10);
+    });
+
+    const trendData = last7Days.map(date => {
+        const dailyOrders = orders.filter(o => o.created_at?.slice(0, 10) === date);
+        const omzet = dailyOrders.reduce((sum, o) => sum + (o.total_idr || 0), 0);
+        return {
+            name: new Date(date).toLocaleDateString('id-ID', { weekday: 'short' }),
+            omzet: omzet
+        };
+    });
+
     // Sort + Search + Advanced Filter
     const [payFilter, setPayFilter] = useState('all'); // all | belum | lunas
     const [dateFrom, setDateFrom] = useState('');
@@ -292,6 +308,32 @@ export default function DashboardPage({ tenantId, licenseStatus, profile }) {
                     </div>
                 </div>
             )}
+
+            {/* Advanced Analytics: 7 Days Trend */}
+            {orders.length > 0 && (
+                <div style={{
+                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+                    padding: '18px', marginBottom: 20, boxShadow: 'var(--shadow-sm)'
+                }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16, fontWeight: 700, letterSpacing: 0.5 }}>TREN PENDAPATAN (7 HARI TERAKHIR)</div>
+                    <div style={{ width: '100%', height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={trendData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                                <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-dim)" fontSize={10} tickFormatter={(val) => formatRpShort(val)} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    formatter={(val) => ['Rp ' + val.toLocaleString(), 'Omzet']}
+                                    contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, fontSize: '0.78rem', boxShadow: 'var(--shadow)' }}
+                                    cursor={{ fill: 'var(--bg3)' }}
+                                />
+                                <Bar dataKey="omzet" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            )}
+
 
             <div className="page-header" style={{ marginBottom: 12 }}>
                 <h2 style={{ fontSize: '1.15rem' }}>Pesanan Aktif <span style={{ color: 'var(--text-dim)', fontWeight: 400, marginLeft: 4 }}>({activeCount})</span></h2>

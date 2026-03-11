@@ -1,10 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
-export default function Navbar({ activePage, onNavigate, isGlobalAdmin, profile }) {
+export default function Navbar({ activePage, onNavigate, isGlobalAdmin, profile, tenantId }) {
     const [showMore, setShowMore] = useState(false);
+    const [lowStockCount, setLowStockCount] = useState(0);
 
     const role = profile?.role || 'operator';
     const isOwner = role === 'owner' || isGlobalAdmin;
+
+    useEffect(() => {
+        if (!tenantId) return;
+
+        const checkStock = async () => {
+            const { data, error } = await supabase
+                .from('inventory')
+                .select('stok, batas_minimum_stok')
+                .eq('tenant_id', tenantId);
+
+            if (!error && data) {
+                const lowItems = data.filter(i => (i.batas_minimum_stok != null) && (i.stok <= i.batas_minimum_stok));
+                setLowStockCount(lowItems.length);
+            }
+        };
+
+        checkStock();
+
+        // Realtime updates for inventory
+        const channel = supabase.channel(`navbar-inventory-${tenantId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory', filter: `tenant_id=eq.${tenantId}` }, checkStock)
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    }, [tenantId]);
 
     const allItems = [
         { id: 'dashboard', icon: '🏠', label: 'Dashboard', show: true },
@@ -40,8 +67,18 @@ export default function Navbar({ activePage, onNavigate, isGlobalAdmin, profile 
                         key={item.id}
                         className={`nav-item ${activePage === item.id ? 'active' : ''}`}
                         onClick={() => handleNavigate(item.id)}
+                        style={{ position: 'relative' }}
                     >
-                        <span className="nav-icon">{item.icon}</span>
+                        <span className="nav-icon">
+                            {item.icon}
+                            {item.id === 'inventory' && lowStockCount > 0 && (
+                                <span style={{
+                                    position: 'absolute', top: 0, right: 10, background: 'var(--error)',
+                                    color: 'white', fontSize: '0.6rem', fontWeight: 'bold', width: 16, height: 16,
+                                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg3)'
+                                }}>{lowStockCount}</span>
+                            )}
+                        </span>
                         <span className="nav-label">{item.label}</span>
                     </button>
                 ))}
@@ -77,11 +114,18 @@ export default function Navbar({ activePage, onNavigate, isGlobalAdmin, profile 
                                     display: 'flex',
                                     gap: '10px',
                                     alignItems: 'center',
-                                    padding: '12px'
+                                    padding: '12px',
+                                    position: 'relative'
                                 }}
                             >
                                 <span>{item.icon}</span>
                                 <span>{item.label}</span>
+                                {item.id === 'inventory' && lowStockCount > 0 && (
+                                    <span style={{
+                                        background: 'var(--error)', color: 'white', fontSize: '0.65rem',
+                                        padding: '2px 6px', borderRadius: 10, marginLeft: 'auto', fontWeight: 'bold'
+                                    }}>{lowStockCount} Limit</span>
+                                )}
                             </button>
                         ))}
                     </div>

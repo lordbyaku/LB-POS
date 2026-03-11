@@ -172,7 +172,7 @@ export default function App() {
         {page === 'admin' && isGlobalAdmin && <AdminPage {...commonProps} />}
       </main>
 
-      <Navbar activePage={page} onNavigate={setPage} isGlobalAdmin={isGlobalAdmin} profile={profile} />
+      <Navbar activePage={page} onNavigate={setPage} isGlobalAdmin={isGlobalAdmin} profile={profile} tenantId={tenantId} />
     </div>
   );
 }

@@ -19,6 +19,7 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
     const service = order.services || {};
     const [tenant, setTenant] = useState(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isPrintingBt, setIsPrintingBt] = useState(false);
 
     useEffect(() => {
         if (!order.tenant_id) return;
@@ -65,7 +66,7 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
         const statusText = STATUS_LABEL[order.status] || order.status || 'Pesanan Masuk';
         const sisa = order.total_idr - (order.dibayar_idr || 0);
         const bayarInfo = order.status_pembayaran === 'lunas'
-            ? 'LUNAS ✅'
+            ? 'LUNAS \u2705'
             : (order.uang_muka_idr > 0
                 ? `DP: ${formatRp(order.uang_muka_idr)} | Sisa: ${formatRp(sisa)}`
                 : 'BELUM LUNAS');
@@ -77,32 +78,46 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
             // Multi-item (dari keranjang)
             itemLines = items.map(it => {
                 const qty = `${it.jumlah} ${it.satuan || ''}`.trim();
-                return `  • ${it.nama_item} (${qty}) → *${formatRp(it.subtotal)}*`;
+                return `  \u2022 ${it.nama_item} (${qty}) \u2192 *${formatRp(it.subtotal)}*`;
             });
         } else if (service.nama_layanan) {
             // Fallback: layanan tunggal
             const berat = order.berat_kg ? ` ${order.berat_kg} kg` : '';
-            itemLines = [`  • ${service.nama_layanan}${berat} → *${formatRp(order.total_idr)}*`];
+            itemLines = [`  \u2022 ${service.nama_layanan}${berat} \u2192 *${formatRp(order.total_idr)}*`];
         }
 
+        // Gunakan Unicode escapes agar emoji tidak corrupt di Windows
+        const ikon = {
+            laundry: '\u{1F9FA}',   // 🧺 washer/laundry
+            kode: '\u{1F4CB}',   // 📋 clipboard
+            tanggal: '\u{1F4C5}',   // 📅 calendar
+            orang: '\u{1F464}',   // 👤 person
+            catatan: '\u{1F4DD}',   // 📝 memo
+            keranjang: '\u{1F6D2}',  // 🛒 cart
+            uang: '\u{1F4B0}',   // 💰 money
+            bayar: '\u{1F4B3}',   // 💳 card
+            paket: '\u{1F4E6}',   // 📦 package
+            terima: '\u{1F64F}',   // 🙏 pray
+        };
+
         const lines = [
-            `🧺 *STRUK LAUNDRY*`,
+            `${ikon.laundry} *STRUK LAUNDRY*`,
             `${tenant?.nama || 'LB POS INDONESIA'}`,
             ``,
-            `📋 Kode: *${order.kode}*`,
-            `📅 Tgl: ${formatDate(order.created_at)}`,
+            `${ikon.kode} Kode: *${order.kode}*`,
+            `${ikon.tanggal} Tgl: ${formatDate(order.created_at)}`,
             ``,
-            `👤 Pelanggan: ${customer.nama || '-'}`,
-            order.catatan ? `📝 Catatan: _${order.catatan}_` : null,
+            `${ikon.orang} Pelanggan: ${customer.nama || '-'}`,
+            order.catatan ? `${ikon.catatan} Catatan: _${order.catatan}_` : null,
             ``,
-            `🛒 *Detail Pesanan:*`,
+            `${ikon.keranjang} *Detail Pesanan:*`,
             ...itemLines,
             ``,
-            `💰 Total: *${formatRp(order.total_idr)}*`,
-            `💳 Bayar: ${bayarInfo}`,
-            `📦 Status: ${statusText}`,
+            `${ikon.uang} Total: *${formatRp(order.total_idr)}*`,
+            `${ikon.bayar} Bayar: ${bayarInfo}`,
+            `${ikon.paket} Status: ${statusText}`,
             ``,
-            tenant?.footer_struk ? tenant.footer_struk : 'Terima kasih atas kepercayaan Anda! 🙏',
+            tenant?.footer_struk ? tenant.footer_struk : `Terima kasih atas kepercayaan Anda! ${ikon.terima}`,
         ].filter(l => l !== null && l !== undefined);
 
         const message = encodeURIComponent(lines.join('\n'));
@@ -143,6 +158,88 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
             element.style.background = originalBg;
             element.style.color = originalColor;
             setIsGeneratingPdf(false);
+        }
+    }
+
+    async function handleBluetoothPrint() {
+        if (!navigator.bluetooth) {
+            alert('Browser Anda tidak mendukung Bluetooth Pribadi (Web Bluetooth API)');
+            return;
+        }
+        setIsPrintingBt(true);
+        try {
+            const device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '49535343-fe7d-4ae5-8fa9-9fafd205e455']
+            });
+
+            const server = await device.gatt.connect();
+
+            // Try to find a printing service
+            const services = await server.getPrimaryServices();
+            let printCharacteristic = null;
+
+            for (const srv of services) {
+                const characteristics = await srv.getCharacteristics();
+                for (const char of characteristics) {
+                    if (char.properties.write || char.properties.writeWithoutResponse) {
+                        printCharacteristic = char;
+                        break;
+                    }
+                }
+                if (printCharacteristic) break;
+            }
+
+            if (!printCharacteristic) {
+                throw new Error('Tidak ditemukan layanan print pada device ini');
+            }
+
+            const encoder = new TextEncoder();
+            let receipt = `\x1B\x40`; // Initialize
+            receipt += `\x1B\x61\x01`; // Align center
+            receipt += `${tenant?.nama || 'LB POS INDONESIA'}\n`;
+            receipt += `\x1B\x61\x00`; // Align left
+            receipt += `--------------------------------\n`;
+            receipt += `Kode: ${order.kode}\n`;
+            receipt += `Tgl : ${formatDate(order.created_at)}\n`;
+            receipt += `Plg : ${customer.nama || '-'}\n`;
+            receipt += `--------------------------------\n`;
+
+            const items = order.order_items || [];
+            if (items.length > 0) {
+                for (const it of items) {
+                    receipt += `${it.nama_item}\n`;
+                    receipt += `${it.jumlah} ${it.satuan} x Rp ${it.harga_satuan}\n`;
+                    receipt += `  Subtotal: ${formatRp(it.subtotal)}\n`;
+                }
+            } else if (service.nama_layanan) {
+                receipt += `${service.nama_layanan}\n`;
+                if (order.berat_kg) receipt += `${order.berat_kg} kg x Harga\n`;
+            }
+            receipt += `--------------------------------\n`;
+            receipt += `TOTAL : ${formatRp(order.total_idr)}\n`;
+
+            const bayarInfo = order.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS';
+            receipt += `BAYAR : ${bayarInfo}\n`;
+            if (order.uang_muka_idr > 0) {
+                receipt += `DP    : ${formatRp(order.uang_muka_idr)}\n`;
+                receipt += `SISA  : ${formatRp(order.total_idr - order.dibayar_idr)}\n`;
+            }
+            receipt += `--------------------------------\n`;
+            receipt += `\x1B\x61\x01`; // Center
+            receipt += `${tenant?.footer_struk || 'Terima kasih!'}\n\n\n`;
+
+            const dataBytes = encoder.encode(receipt);
+            const chunkSize = 20;
+            for (let i = 0; i < dataBytes.length; i += chunkSize) {
+                await printCharacteristic.writeValue(dataBytes.slice(i, i + chunkSize));
+            }
+            alert('Sukses mencetak via Bluetooth!');
+        } catch (err) {
+            console.error(err);
+            alert('Gagal Bluetooth: ' + err.message);
+        } finally {
+            setIsPrintingBt(false);
         }
     }
 
@@ -241,22 +338,32 @@ export default function ReceiptModal({ order, onClose, isPrint = false }) {
 
                 <div className="modal-actions" style={{ flexWrap: 'wrap', gap: '8px' }}>
                     <button className="btn btn-secondary" onClick={onClose} style={{ flex: '1 1 100%' }}>Tutup</button>
-                    <button className="btn btn-secondary" onClick={handleSavePdf} disabled={isGeneratingPdf} style={{ flex: 1, background: 'var(--bg2)', minWidth: '90px' }}>
-                        {isGeneratingPdf ? '⏳ Menyimpan...' : '📄 Save PDF'}
+                    <button className="btn btn-secondary" onClick={handleSavePdf} disabled={isGeneratingPdf} style={{ flex: 1, background: 'var(--bg2)', minWidth: '90px', fontSize: '0.8rem' }}>
+                        {isGeneratingPdf ? '⏳...' : '📄 PDF'}
+                    </button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleBluetoothPrint}
+                        disabled={isPrintingBt}
+                        style={{ flex: 1, minWidth: '90px', background: '#3b82f6', borderColor: '#3b82f6', fontSize: '0.8rem' }}
+                        title="Print langsung ke Printer Thermal Bluetooth"
+                    >
+                        {isPrintingBt ? '⏳...' : '🖨️ BT Print'}
                     </button>
                     <button
                         className="btn btn-primary"
                         onClick={handlePrint}
-                        style={{ flex: 1, minWidth: '90px' }}
+                        style={{ flex: 1, minWidth: '90px', fontSize: '0.8rem' }}
+                        title="Print konvensional via browser"
                     >
-                        🖨️ Print
+                        🖨️ Web Print
                     </button>
                     <button
                         className="btn btn-wa"
                         onClick={handleShareWhatsApp}
                         disabled={!customer.no_telepon}
                         title={!customer.no_telepon ? 'Nomor pelanggan tidak tersedia' : `Kirim ke ${customer.no_telepon}`}
-                        style={{ flex: 1, minWidth: '90px' }}
+                        style={{ flex: 1, minWidth: '90px', fontSize: '0.8rem' }}
                     >
                         <span>📲</span> WA
                     </button>
